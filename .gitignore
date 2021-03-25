@@ -102,3 +102,6 @@ dist
 
 # TernJS port file
 .tern-port
+
+# 깃헙에 우리 강의는 올리지 말아요
+download
