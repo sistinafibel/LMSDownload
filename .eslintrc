@@ -4,7 +4,8 @@
 	"plugins": ["@typescript-eslint"],
   "extends": [
 		"airbnb-base",
-		"plugin:@typescript-eslint/recommended"
+		"plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended"
 	],// 여기까지가 기본 룰 이후는 각자 세팅
   "parserOptions": { // 파서 옵션 
     "ecmaVersion": 2018, //사용할 ECMAScript 버전
@@ -13,7 +14,8 @@
 	"env": { //전역번수 선언 jest를 위해 추가 import 없이 쓰는 명령어들
 	    "jest": true
 	},
-	"rules": { //내가 필요없는 룰 설정
+	"rules": {
+    "no-shadow": "off",
     "no-unused-vars": "off",
     "max-len": "off",
     "import/extensions": "off",
@@ -21,6 +23,7 @@
     "max-classes-per-file": "off",
     "import/prefer-default-export": "off",
     "import/no-unresolved": "off",
+    "eslint-disable-next-line": "off",
     "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.ts", "**/*.test.js"]}],
     "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/explicit-member-accessibility": 0,

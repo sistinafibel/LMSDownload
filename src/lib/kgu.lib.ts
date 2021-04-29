@@ -2,7 +2,7 @@ import * as cheerio from 'cheerio';
 import * as fs from 'fs';
 import axios from 'axios';
 import * as parser from 'fast-xml-parser';
-import * as FormData from 'form-data';
+import FormData from 'form-data';
 
 class KGUDownload {
   constructor(cookie: string) {
@@ -44,23 +44,23 @@ class KGUDownload {
    * @param id
    */
   public async myClassList(id: number) {
-    console.log('------------------전체 목록 가져오기 -----------');
     const html = await axios({
       method: 'get',
       url: `http://lms.kyonggi.ac.kr/course/view.php?id=${id}`,
       headers: this.headres,
     });
 
-    const $: any = cheerio.load(html.data);
-    const activityinstance: any = $('.total_sections .activityinstance > a');
+    const $ = cheerio.load(html.data);
+    const activityinstance: Array<any> = $('.total_sections .activityinstance > a');
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const i in activityinstance) {
       if (typeof activityinstance[i].attribs !== 'undefined' && typeof activityinstance[i].attribs.onclick !== 'undefined' && activityinstance[i].attribs.onclick !== '') {
         let onclickList = activityinstance[i].attribs.onclick.replace('window.open(', '').split(',');
         onclickList = onclickList[0].replace(/'/g, '').split('i=');
         if (onclickList[0].indexOf('xncommons') !== -1) {
-          console.log(onclickList[1]);
-          await this.myClassView(onclickList[1]);
+          // eslint-disable-next-line no-await-in-loop
+          await this.myClassView(onclickList[1]); // 강의를 연속적으로 받으면 문제가 생김. 1강의씩 순차적으로
         }
       }
     }
@@ -72,9 +72,8 @@ class KGUDownload {
    * @param url
    * @returns
    */
-  private async myClassView(url: string): Promise<any> {
+  public async myClassView(url: string): Promise<any> {
     const { headres } = this;
-    console.log('-------------------2. View Page ---------------------------------');
 
     // 강의의 실제 코드를 가져오기
     const html2 = await axios({
@@ -94,33 +93,29 @@ class KGUDownload {
     });
 
     const jsonObj = parser.parse(html3.data);
-    console.log(`http://cms.kyonggi.ac.kr/viewer/ssplayer/uniplayer_support/content.php?content_id=${html2split[0]}`);
-
     const type = jsonObj.content.content_playing_info.content_type;
-    const apiRes = type === 'video1' ? jsonObj.content.content_playing_info.main_media.desktop.html5.media_uri : jsonObj.content.service_root.media.media_uri[0].replace('[MEDIA_FILE]', 'screen.mp4');
+    const apiRes =
+      type === 'video1'
+        ? jsonObj.content.content_playing_info.main_media.desktop.html5.media_uri
+        : jsonObj.content.service_root.media.media_uri[0].replace('[MEDIA_FILE]', 'screen.mp4');
     const apiTitle = jsonObj.content.content_metadata.title.replace(/:/g, '');
 
-    console.log(apiRes);
-    console.log(apiTitle);
+    return { apiRes, apiTitle };
+  }
 
+  public async Download(apiRes: string, apiTitle: string) {
     const videoDownload = await axios({
       method: 'get',
       url: apiRes,
       responseType: 'stream',
     });
-    console.log('-------------------File Info-------------------------------------');
-    console.log(videoDownload.headers);
     const fileSet = videoDownload.data.pipe(fs.createWriteStream(`./download/${apiTitle}.mp4`));
-
     fileSet.on('finish', () => {
-      console.log('다운로드 완료!');
       return true;
     });
-    fileSet.on('error', (err) => {
-      console.log('오류 발생');
-      console.log(err);
+    fileSet.on('error', err => {
+      return false;
     });
-    console.log('-------------------File 다운로드중---------------------------------');
   }
 }
 
