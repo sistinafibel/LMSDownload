@@ -51,7 +51,7 @@ class SSUDownload {
 
     const html3 = await axios({
       method: 'get',
-      url: ` http://commons.ssu.ac.kr/viewer/ssplayer/uniplayer_support/content.php?content_id=${html2split[0]}`,
+      url: `http://commons.ssu.ac.kr/viewer/ssplayer/uniplayer_support/content.php?content_id=${html2split[0]}`,
       headers: headres,
     });
 

@@ -1,6 +1,11 @@
 export interface IHeadres {
   'Content-Type': string;
-  'User-Agent': string;
   Referer: string;
   Cookie: string;
+}
+
+export interface IMyClassUrl {
+  viewListUrl: string;
+  myClassDefaultUrl: string;
+  uniplayerDefaultUrl: string;
 }

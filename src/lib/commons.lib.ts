@@ -3,27 +3,40 @@ import * as fs from 'fs';
 import axios from 'axios';
 import * as parser from 'fast-xml-parser';
 import * as FormData from 'form-data';
+import { IHeadres, IMyClassUrl } from '../interfaces/headres.interface';
 
 class CommonDownload {
-  constructor(cookie: string) {
-    this.headres.Cookie = cookie;
-  }
-
-  private headres = {
+  private headres: IHeadres = {
     'Content-Type': 'text/html; charset=utf-8',
     Referer: 'http://myclass.ssu.ac.kr/',
     Cookie: '',
   };
 
+  private classUrl: IMyClassUrl = {
+    viewListUrl: '',
+    myClassDefaultUrl: '',
+    uniplayerDefaultUrl: '',
+  };
+
+  constructor(cookie: string, Referer: string, viewListUrl: string, myClassDefaultUrl: string, uniplayerDefaultUrl: string) {
+    this.headres.Cookie = cookie;
+    this.headres.Referer = Referer;
+    this.classUrl.viewListUrl = viewListUrl;
+    this.classUrl.myClassDefaultUrl = myClassDefaultUrl;
+    this.classUrl.uniplayerDefaultUrl = uniplayerDefaultUrl;
+  }
+
   public async myClassList(id: number) {
     const html = await axios({
       method: 'get',
-      url: `http://myclass.ssu.ac.kr/course/view.php?id=${id}`,
+      url: `${this.classUrl.viewListUrl}${id}`,
       headers: this.headres,
     });
 
     const $: any = cheerio.load(html.data);
     const activityinstance: any = $('.total_sections .activityinstance > a');
+
+    const myClassUrlArray = [];
 
     // eslint-disable-next-line no-restricted-syntax
     for (const i in activityinstance) {
@@ -31,18 +44,17 @@ class CommonDownload {
         let onclickList = activityinstance[i].attribs.onclick.replace('window.open(', '').split(',');
         onclickList = onclickList[0].replace(/'/g, '').split('i=');
         if (onclickList[0].indexOf('xncommons') !== -1) {
-          // eslint-disable-next-line no-await-in-loop
-          await this.myClassView(onclickList[1]); // 강의를 연속적으로 받으면 문제가 생김. 1강의씩 순차적으로
+          myClassUrlArray.push(onclickList[1]);
         }
       }
     }
   }
 
-  public async myClassView(url: string): Promise<any> {
+  public async myClassView(viewCode: string): Promise<any> {
     const { headres } = this;
     const html2 = await axios({
       method: 'get',
-      url: `http://myclass.ssu.ac.kr/mod/xncommons/viewer/default/default.php?id=${url}`,
+      url: `http://myclass.ssu.ac.kr/mod/xncommons/viewer/default/default.php?id=${viewCode}`,
       headers: headres,
     });
     let html2split = html2.data.split('content_id=');

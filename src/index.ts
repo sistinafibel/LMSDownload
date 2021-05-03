@@ -1,7 +1,6 @@
-import KGUDownload from './lib/kgu.lib';
-import SsuDownload from './lib/ssu.lib';
+import CommonsUniversity from './lib/commons.lib';
 
 (async () => {
-  const ssu = new SsuDownload('쿠키값');
-  await ssu.myClassList(321011);
+  const myUniversity = new CommonsUniversity();
+  //await ssu.myClassList(321011);
 })();
