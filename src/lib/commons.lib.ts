@@ -3,27 +3,36 @@ import * as fs from 'fs';
 import axios from 'axios';
 import * as parser from 'fast-xml-parser';
 import * as FormData from 'form-data';
+import { IHeadres, IMyClassUrl } from '../interfaces/headres.interface';
 
 class CommonDownload {
-  constructor(cookie: string) {
-    this.headres.Cookie = cookie;
-  }
-
-  private headres = {
+  private headres: IHeadres = {
     'Content-Type': 'text/html; charset=utf-8',
-    Referer: 'http://myclass.ssu.ac.kr/',
+    Referer: '',
     Cookie: '',
   };
 
-  public async myClassList(id: number) {
+  private classUrl: IMyClassUrl;
+
+  constructor(cookie: string, universitySet: IMyClassUrl) {
+    this.headres.Cookie = cookie;
+    this.headres.Referer = universitySet.REFERER_URL;
+    this.classUrl.VIEW_LIST_URL = universitySet.VIEW_LIST_URL;
+    this.classUrl.MY_CLASS_DEFAULT = universitySet.MY_CLASS_DEFAULT;
+    this.classUrl.UNIPLAYER_DEFAULT = universitySet.UNIPLAYER_DEFAULT;
+  }
+
+  public async myClassList(id: number): Promise<Array<string>> {
     const html = await axios({
       method: 'get',
-      url: `http://myclass.ssu.ac.kr/course/view.php?id=${id}`,
+      url: `${this.classUrl.VIEW_LIST_URL}${id}`,
       headers: this.headres,
     });
 
-    const $: any = cheerio.load(html.data);
-    const activityinstance: any = $('.total_sections .activityinstance > a');
+    const $ = cheerio.load(html.data);
+    const activityinstance: Array<any> = $('.total_sections .activityinstance > a');
+
+    const myClassUrlArray = [];
 
     // eslint-disable-next-line no-restricted-syntax
     for (const i in activityinstance) {
@@ -31,18 +40,19 @@ class CommonDownload {
         let onclickList = activityinstance[i].attribs.onclick.replace('window.open(', '').split(',');
         onclickList = onclickList[0].replace(/'/g, '').split('i=');
         if (onclickList[0].indexOf('xncommons') !== -1) {
-          // eslint-disable-next-line no-await-in-loop
-          await this.myClassView(onclickList[1]); // 강의를 연속적으로 받으면 문제가 생김. 1강의씩 순차적으로
+          myClassUrlArray.push(onclickList[1]);
         }
       }
     }
+
+    return myClassUrlArray;
   }
 
-  public async myClassView(url: string): Promise<any> {
+  public async myClassView(viewCode: string): Promise<any> {
     const { headres } = this;
     const html2 = await axios({
       method: 'get',
-      url: `http://myclass.ssu.ac.kr/mod/xncommons/viewer/default/default.php?id=${url}`,
+      url: `${this.classUrl.MY_CLASS_DEFAULT}${viewCode}`,
       headers: headres,
     });
     let html2split = html2.data.split('content_id=');
@@ -51,7 +61,7 @@ class CommonDownload {
 
     const html3 = await axios({
       method: 'get',
-      url: ` http://commons.ssu.ac.kr/viewer/ssplayer/uniplayer_support/content.php?content_id=${html2split[0]}`,
+      url: `${this.classUrl.UNIPLAYER_DEFAULT}${html2split[0]}`,
       headers: headres,
     });
 
@@ -69,18 +79,21 @@ class CommonDownload {
     return { apiRes, apiTitle };
   }
 
-  public async Download(apiRes: string, apiTitle: string) {
-    const videoDownload = await axios({
-      method: 'get',
-      url: apiRes,
-      responseType: 'stream',
-    });
-    const fileSet = videoDownload.data.pipe(fs.createWriteStream(`./download/${apiTitle}.mp4`));
-    fileSet.on('finish', () => {
-      return true;
-    });
-    fileSet.on('error', err => {
-      return false;
+  public async Download(apiRes: string, apiTitle: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      axios({
+        method: 'get',
+        url: apiRes,
+        responseType: 'stream',
+      }).then(videoDownload => {
+        const fileSet = videoDownload.data.pipe(fs.createWriteStream(`./download/${apiTitle}.mp4`));
+        fileSet.on('finish', () => {
+          resolve(true);
+        });
+        fileSet.on('error', err => {
+          reject(err);
+        });
+      });
     });
   }
 }
