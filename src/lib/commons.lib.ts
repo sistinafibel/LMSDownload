@@ -8,33 +8,29 @@ import { IHeadres, IMyClassUrl } from '../interfaces/headres.interface';
 class CommonDownload {
   private headres: IHeadres = {
     'Content-Type': 'text/html; charset=utf-8',
-    Referer: 'http://myclass.ssu.ac.kr/',
+    Referer: '',
     Cookie: '',
   };
 
-  private classUrl: IMyClassUrl = {
-    viewListUrl: '',
-    myClassDefaultUrl: '',
-    uniplayerDefaultUrl: '',
-  };
+  private classUrl: IMyClassUrl;
 
-  constructor(cookie: string, Referer: string, viewListUrl: string, myClassDefaultUrl: string, uniplayerDefaultUrl: string) {
+  constructor(cookie: string, universitySet: IMyClassUrl) {
     this.headres.Cookie = cookie;
-    this.headres.Referer = Referer;
-    this.classUrl.viewListUrl = viewListUrl;
-    this.classUrl.myClassDefaultUrl = myClassDefaultUrl;
-    this.classUrl.uniplayerDefaultUrl = uniplayerDefaultUrl;
+    this.headres.Referer = universitySet.REFERER_URL;
+    this.classUrl.VIEW_LIST_URL = universitySet.VIEW_LIST_URL;
+    this.classUrl.MY_CLASS_DEFAULT = universitySet.MY_CLASS_DEFAULT;
+    this.classUrl.UNIPLAYER_DEFAULT = universitySet.UNIPLAYER_DEFAULT;
   }
 
-  public async myClassList(id: number) {
+  public async myClassList(id: number): Promise<Array<string>> {
     const html = await axios({
       method: 'get',
-      url: `${this.classUrl.viewListUrl}${id}`,
+      url: `${this.classUrl.VIEW_LIST_URL}${id}`,
       headers: this.headres,
     });
 
-    const $: any = cheerio.load(html.data);
-    const activityinstance: any = $('.total_sections .activityinstance > a');
+    const $ = cheerio.load(html.data);
+    const activityinstance: Array<any> = $('.total_sections .activityinstance > a');
 
     const myClassUrlArray = [];
 
@@ -48,13 +44,15 @@ class CommonDownload {
         }
       }
     }
+
+    return myClassUrlArray;
   }
 
   public async myClassView(viewCode: string): Promise<any> {
     const { headres } = this;
     const html2 = await axios({
       method: 'get',
-      url: `http://myclass.ssu.ac.kr/mod/xncommons/viewer/default/default.php?id=${viewCode}`,
+      url: `${this.classUrl.MY_CLASS_DEFAULT}${viewCode}`,
       headers: headres,
     });
     let html2split = html2.data.split('content_id=');
@@ -63,7 +61,7 @@ class CommonDownload {
 
     const html3 = await axios({
       method: 'get',
-      url: ` http://commons.ssu.ac.kr/viewer/ssplayer/uniplayer_support/content.php?content_id=${html2split[0]}`,
+      url: `${this.classUrl.UNIPLAYER_DEFAULT}${html2split[0]}`,
       headers: headres,
     });
 
@@ -81,18 +79,21 @@ class CommonDownload {
     return { apiRes, apiTitle };
   }
 
-  public async Download(apiRes: string, apiTitle: string) {
-    const videoDownload = await axios({
-      method: 'get',
-      url: apiRes,
-      responseType: 'stream',
-    });
-    const fileSet = videoDownload.data.pipe(fs.createWriteStream(`./download/${apiTitle}.mp4`));
-    fileSet.on('finish', () => {
-      return true;
-    });
-    fileSet.on('error', err => {
-      return false;
+  public async Download(apiRes: string, apiTitle: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      axios({
+        method: 'get',
+        url: apiRes,
+        responseType: 'stream',
+      }).then(videoDownload => {
+        const fileSet = videoDownload.data.pipe(fs.createWriteStream(`./download/${apiTitle}.mp4`));
+        fileSet.on('finish', () => {
+          resolve(true);
+        });
+        fileSet.on('error', err => {
+          reject(err);
+        });
+      });
     });
   }
 }

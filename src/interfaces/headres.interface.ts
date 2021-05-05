@@ -5,7 +5,8 @@ export interface IHeadres {
 }
 
 export interface IMyClassUrl {
-  viewListUrl: string;
-  myClassDefaultUrl: string;
-  uniplayerDefaultUrl: string;
+  REFERER_URL?: string;
+  VIEW_LIST_URL: string;
+  MY_CLASS_DEFAULT: string;
+  UNIPLAYER_DEFAULT: string;
 }
